@@ -8,7 +8,8 @@ import {
 import AddProductModal from './AddProductModal';
 import InventoryList from './InventoryList';
 import LowStockWidget from '../components/LowStockWidget';
-import ClientRegistry from './ClientRegistry'; // IMPORTED CLIENT REGISTRY
+import ClientRegistry from './ClientRegistry';
+import StaffNoticeManager from '../components/StaffNoticeManager'; // IMPORTED MANAGER
 
 const AdminDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -115,20 +116,29 @@ const AdminDashboard = () => {
               </motion.div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="lg:col-span-2 p-10 border border-white/5 bg-white/[0.02] backdrop-blur-md relative overflow-hidden group">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-30 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="flex justify-between items-center mb-10">
-                    <h3 className="text-xs font-black tracking-[0.4em] uppercase text-gray-400">Inventory Stream • Live Log</h3>
-                    <button className="text-[9px] font-bold text-[#D4AF37] border-b border-[#D4AF37]/20 pb-1">VIEW ALL LOGS</button>
-                  </div>
-                  <div className="space-y-6">
-                    <ActivityRow title="Nippon Paint Bulk Entry" time="02 MINS AGO" status="COMPLETED" />
-                    <ActivityRow title="LankaTiles Shipment Dispatch" time="14 MINS AGO" status="PENDING" />
-                    <ActivityRow title="New Client Registration: Pitigala" time="45 MINS AGO" status="VERIFIED" />
-                    <ActivityRow title="Stock Alert: Sierra Cables Low" time="1 HOUR AGO" status="ALERT" color="text-red-500" />
-                  </div>
-                </motion.div>
+                {/* LEFT: ACTIVITY FEED & STAFF NOTICE MANAGER */}
+                <div className="lg:col-span-2 space-y-8">
+                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="p-10 border border-white/5 bg-white/[0.02] backdrop-blur-md relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-30 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="flex justify-between items-center mb-10">
+                      <h3 className="text-xs font-black tracking-[0.4em] uppercase text-gray-400">Inventory Stream • Live Log</h3>
+                      <button className="text-[9px] font-bold text-[#D4AF37] border-b border-[#D4AF37]/20 pb-1">VIEW ALL LOGS</button>
+                    </div>
+                    <div className="space-y-6">
+                      <ActivityRow title="Nippon Paint Bulk Entry" time="02 MINS AGO" status="COMPLETED" />
+                      <ActivityRow title="LankaTiles Shipment Dispatch" time="14 MINS AGO" status="PENDING" />
+                      <ActivityRow title="New Client Registration: Pitigala" time="45 MINS AGO" status="VERIFIED" />
+                      <ActivityRow title="Stock Alert: Sierra Cables Low" time="1 HOUR AGO" status="ALERT" color="text-red-500" />
+                    </div>
+                  </motion.div>
 
+                  {/* STAFF NOTICE INPUT AREA */}
+                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+                    <StaffNoticeManager />
+                  </motion.div>
+                </div>
+
+                {/* RIGHT: ALERTS & ACTIONS */}
                 <div className="flex flex-col gap-8">
                   <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 }}>
                     <LowStockWidget />
