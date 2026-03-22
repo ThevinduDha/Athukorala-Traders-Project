@@ -1,17 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Edit, Trash2, Box } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import UpdateProductModal from './UpdateProductModal'; // IMPORTED UPDATE MODAL
 
 const InventoryList = () => {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // NEW STATES FOR UPDATE LOGIC
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-  useEffect(() => {
+  // 1. Fetch all products on load
+  const fetchProducts = () => {
     fetch("http://localhost:8080/api/products/all")
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error("Error fetching stock"));
+  };
+
+  useEffect(() => {
+    fetchProducts();
   }, []);
+
+  // 2. Premium Delete Functionality
+  const handleDelete = async (id) => {
+    if (window.confirm("CRITICAL: ARE YOU SURE YOU WANT TO PURGE THIS ASSET FROM THE REGISTRY?")) {
+      const loadingToast = toast.loading("Executing Delete Protocol...");
+      
+      try {
+        const response = await fetch(`http://localhost:8080/api/products/${id}`, {
+          method: "DELETE",
+        });
+
+        if (response.ok) {
+          toast.success("Asset Successfully Purged", { id: loadingToast });
+          setProducts(products.filter(product => product.id !== id));
+        } else {
+          toast.error("Authorization Denied or System Error", { id: loadingToast });
+        }
+      } catch (error) {
+        toast.error("Connection Failed: Ensure Backend is Online", { id: loadingToast });
+      }
+    }
+  };
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -31,7 +64,7 @@ const InventoryList = () => {
             type="text" 
             placeholder="SEARCH INVENTORY..." 
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-white/5 border border-white/10 py-3 pl-10 pr-6 text-[10px] tracking-widest outline-none focus:border-[#D4AF37]/50 w-80 uppercase"
+            className="bg-white/5 border border-white/10 py-3 pl-10 pr-6 text-[10px] tracking-widest outline-none focus:border-[#D4AF37]/50 w-80 uppercase transition-all"
           />
         </div>
       </div>
@@ -53,7 +86,11 @@ const InventoryList = () => {
               <tr key={product.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                 <td className="p-6">
                   <div className="w-12 h-12 bg-black border border-white/10 overflow-hidden relative group-hover:border-[#D4AF37]/50 transition-colors">
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={product.imageUrl || "https://res.cloudinary.com/demo/image/upload/v1631530000/industrial-box.png"} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                 </td>
                 <td className="p-6 font-bold uppercase tracking-tight">{product.name}</td>
@@ -66,8 +103,23 @@ const InventoryList = () => {
                 </td>
                 <td className="p-6">
                   <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-gray-500 hover:text-[#D4AF37]"><Edit size={16}/></button>
-                    <button className="text-gray-500 hover:text-red-500"><Trash2 size={16}/></button>
+                    {/* UPDATED EDIT BUTTON */}
+                    <button 
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setIsUpdateModalOpen(true);
+                      }}
+                      className="text-gray-500 hover:text-[#D4AF37] transition-colors"
+                    >
+                      <Edit size={16}/>
+                    </button>
+                    
+                    <button 
+                      onClick={() => handleDelete(product.id)}
+                      className="text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={16}/>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -75,6 +127,18 @@ const InventoryList = () => {
           </tbody>
         </table>
       </div>
+
+      {/* UPDATE MODAL INTEGRATION */}
+      <AnimatePresence>
+        {isUpdateModalOpen && (
+          <UpdateProductModal 
+            isOpen={isUpdateModalOpen} 
+            onClose={() => setIsUpdateModalOpen(false)} 
+            product={selectedProduct}
+            onUpdateSuccess={fetchProducts}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
