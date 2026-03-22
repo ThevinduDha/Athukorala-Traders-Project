@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import AddProductModal from './AddProductModal';
 import InventoryList from './InventoryList';
-import LowStockWidget from '../components/LowStockWidget'; // IMPORTED WIDGET
+import LowStockWidget from '../components/LowStockWidget';
+import ClientRegistry from './ClientRegistry'; // IMPORTED CLIENT REGISTRY
 
 const AdminDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,7 +54,12 @@ const AdminDashboard = () => {
             active={activeTab === 'inventory'} 
             onClick={() => setActiveTab('inventory')}
           />
-          <NavItem icon={<Users size={18}/>} label="Client Registry" />
+          <NavItem 
+            icon={<Users size={18}/>} 
+            label="Client Registry" 
+            active={activeTab === 'clients'} 
+            onClick={() => setActiveTab('clients')}
+          />
           <NavItem icon={<BarChart3 size={18}/>} label="Financials" />
           <NavItem icon={<Globe size={18}/>} label="Logistics" />
           <NavItem icon={<Settings size={18}/>} label="System Config" />
@@ -95,7 +101,7 @@ const AdminDashboard = () => {
         </header>
 
         <AnimatePresence mode="wait">
-          {activeTab === 'command' ? (
+          {activeTab === 'command' && (
             <motion.div 
               key="command"
               initial={{ opacity: 0, x: -20 }}
@@ -109,7 +115,6 @@ const AdminDashboard = () => {
               </motion.div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* LEFT: ACTIVITY FEED */}
                 <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="lg:col-span-2 p-10 border border-white/5 bg-white/[0.02] backdrop-blur-md relative overflow-hidden group">
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-30 group-hover:opacity-100 transition-opacity"></div>
                   <div className="flex justify-between items-center mb-10">
@@ -124,23 +129,12 @@ const AdminDashboard = () => {
                   </div>
                 </motion.div>
 
-                {/* RIGHT: ALERTS & ACTIONS */}
                 <div className="flex flex-col gap-8">
-                  {/* LOW STOCK WIDGET PLACED HERE */}
-                  <motion.div 
-                    initial={{ opacity: 0, x: 30 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    transition={{ delay: 0.7 }}
-                  >
+                  <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 }}>
                     <LowStockWidget />
                   </motion.div>
 
-                  <motion.div 
-                    initial={{ opacity: 0, x: 30 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    transition={{ delay: 0.8 }} 
-                    className="p-10 border border-white/5 bg-[#D4AF37]/5 backdrop-blur-md flex flex-col justify-between"
-                  >
+                  <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }} className="p-10 border border-white/5 bg-[#D4AF37]/5 backdrop-blur-md flex flex-col justify-between">
                     <div>
                       <h3 className="text-xs font-black tracking-[0.4em] uppercase text-[#D4AF37] mb-8">Quick Operations</h3>
                       <div className="space-y-4">
@@ -162,14 +156,17 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </motion.div>
-          ) : (
-            <motion.div
-              key="inventory"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
+          )}
+
+          {activeTab === 'inventory' && (
+            <motion.div key="inventory" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <InventoryList />
+            </motion.div>
+          )}
+
+          {activeTab === 'clients' && (
+            <motion.div key="clients" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <ClientRegistry />
             </motion.div>
           )}
         </AnimatePresence>
