@@ -2,14 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Edit, Trash2, Box } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import UpdateProductModal from './UpdateProductModal'; // IMPORTED UPDATE MODAL
+import UpdateProductModal from './UpdateProductModal'; 
+import DeleteConfirmModal from '../components/DeleteConfirmModal'; // IMPORTED NEW MODAL
 
 const InventoryList = () => {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // NEW STATES FOR UPDATE LOGIC
+  // MODAL STATES
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // NEW
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // 1. Fetch all products on load
@@ -24,31 +26,32 @@ const InventoryList = () => {
     fetchProducts();
   }, []);
 
-  // 2. Premium Delete Functionality
-  const handleDelete = async (id) => {
-    if (window.confirm("CRITICAL: ARE YOU SURE YOU WANT TO PURGE THIS ASSET FROM THE REGISTRY?")) {
-      const loadingToast = toast.loading("Executing Delete Protocol...");
-      
-      try {
-        const response = await fetch(`http://localhost:8080/api/products/${id}`, {
-          method: "DELETE",
-        });
+  // 2. High-Security Delete Protocol
+  const executeDelete = async () => {
+    if (!selectedProduct) return;
 
-        if (response.ok) {
-          toast.success("Asset Successfully Purged", { id: loadingToast });
-          setProducts(products.filter(product => product.id !== id));
-        } else {
-          toast.error("Authorization Denied or System Error", { id: loadingToast });
-        }
-      } catch (error) {
-        toast.error("Connection Failed: Ensure Backend is Online", { id: loadingToast });
+    const loadingToast = toast.loading("Executing Delete Protocol...");
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/products/${selectedProduct.id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast.success("Asset Successfully Purged", { id: loadingToast });
+        setProducts(products.filter(p => p.id !== selectedProduct.id));
+        setIsDeleteModalOpen(false);
+      } else {
+        toast.error("Authorization Denied or System Error", { id: loadingToast });
       }
+    } catch (error) {
+      toast.error("Connection Failed: Ensure Backend is Online", { id: loadingToast });
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = Array.isArray(products) ? products.filter(p => 
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) : [];
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8">
@@ -95,7 +98,7 @@ const InventoryList = () => {
                 </td>
                 <td className="p-6 font-bold uppercase tracking-tight">{product.name}</td>
                 <td className="p-6 text-gray-500 uppercase text-xs">{product.category}</td>
-                <td className="p-6 font-mono text-[#D4AF37]">LKR {product.price}</td>
+                <td className="p-6 font-mono text-[#D4AF37]">LKR {product.price?.toLocaleString()}</td>
                 <td className="p-6">
                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest ${product.stockQuantity > 5 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                      {product.stockQuantity} IN STOCK
@@ -103,7 +106,6 @@ const InventoryList = () => {
                 </td>
                 <td className="p-6">
                   <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* UPDATED EDIT BUTTON */}
                     <button 
                       onClick={() => {
                         setSelectedProduct(product);
@@ -115,7 +117,10 @@ const InventoryList = () => {
                     </button>
                     
                     <button 
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setIsDeleteModalOpen(true);
+                      }}
                       className="text-gray-500 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={16}/>
@@ -128,7 +133,7 @@ const InventoryList = () => {
         </table>
       </div>
 
-      {/* UPDATE MODAL INTEGRATION */}
+      {/* UPDATE MODAL */}
       <AnimatePresence>
         {isUpdateModalOpen && (
           <UpdateProductModal 
@@ -136,6 +141,18 @@ const InventoryList = () => {
             onClose={() => setIsUpdateModalOpen(false)} 
             product={selectedProduct}
             onUpdateSuccess={fetchProducts}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <DeleteConfirmModal 
+            isOpen={isDeleteModalOpen} 
+            onClose={() => setIsDeleteModalOpen(false)} 
+            onConfirm={executeDelete} 
+            itemName={selectedProduct?.name} 
           />
         )}
       </AnimatePresence>

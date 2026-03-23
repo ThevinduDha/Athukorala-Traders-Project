@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Save, Box, DollarSign, ListTree } from 'lucide-react';
+import { X, Save, Box, DollarSign, ListTree, Truck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import ImageUpload from '../components/ImageUpload';
@@ -8,8 +8,29 @@ import ImageUpload from '../components/ImageUpload';
 const AddProductModal = ({ isOpen, onClose }) => {
   const { register, handleSubmit, reset, watch } = useForm();
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
-  
-  // Category-based default mapping
+  const [suppliers, setSuppliers] = useState([]);
+
+  // --- HARDWARE CATEGORIES FOR CONSISTENCY ---
+  const HARDWARE_CATEGORIES = [
+    "Electrical",
+    "Plumbing",
+    "Painting & Adhesives",
+    "Power Tools",
+    "Hand Tools",
+    "Building Materials",
+    "Fasteners & Screws",
+    "Safety Gear"
+  ];
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch("http://localhost:8080/api/suppliers/all")
+        .then((res) => res.json())
+        .then((data) => setSuppliers(Array.isArray(data) ? data : []))
+        .catch((err) => console.error("Could not load suppliers", err));
+    }
+  }, [isOpen]);
+
   const getDefaultIcon = (category) => {
     if (!category) return "https://res.cloudinary.com/demo/image/upload/v1631530000/industrial-box.png";
     const cat = category.toLowerCase();
@@ -20,11 +41,16 @@ const AddProductModal = ({ isOpen, onClose }) => {
   };
 
   const onSubmit = async (data) => {
-    // Hybrid logic: Use uploaded URL OR the category-based default
     const finalData = {
       ...data,
-      imageUrl: uploadedImageUrl || getDefaultIcon(data.category)
+      price: parseFloat(data.price),
+      stockQuantity: parseInt(data.stockQuantity),
+      reorderLevel: 5, 
+      imageUrl: uploadedImageUrl || getDefaultIcon(data.category),
+      supplier: data.supplierId ? { id: parseInt(data.supplierId) } : null
     };
+
+    const loadingToast = toast.loading("Recording Asset...");
 
     try {
       const response = await fetch("http://localhost:8080/api/products/add", {
@@ -34,13 +60,16 @@ const AddProductModal = ({ isOpen, onClose }) => {
       });
 
       if (response.ok) {
-        toast.success("Product Inventory Updated!");
+        toast.success("Product Inventory Updated!", { id: loadingToast });
         reset();
         setUploadedImageUrl("");
         onClose();
+        window.location.reload(); 
+      } else {
+        toast.error("Server rejected data format", { id: loadingToast });
       }
     } catch (error) {
-      toast.error("Database connection failed.");
+      toast.error("Database connection failed.", { id: loadingToast });
     }
   };
 
@@ -65,14 +94,49 @@ const AddProductModal = ({ isOpen, onClose }) => {
         </header>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* IMAGE UPLOAD SECTION */}
           <div className="group">
              <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-3">Product Visual</label>
              <ImageUpload onUploadSuccess={(url) => setUploadedImageUrl(url)} />
           </div>
 
           <InputGroup label="Product Name" icon={<Box size={16}/>} register={register("name")} placeholder="e.g. Nippon Paint Gold" />
-          <InputGroup label="Category" icon={<ListTree size={16}/>} register={register("category")} placeholder="Electrical / Painting / Plumbing" />
+          
+          <div className="group">
+            <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-3 text-left">Primary Supplier</label>
+            <div className="relative">
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[#D4AF37]/50 group-focus-within:text-[#D4AF37] transition-colors">
+                <Truck size={16} />
+              </div>
+              <select 
+                {...register("supplierId")}
+                className="w-full bg-transparent border-b border-white/10 pl-8 py-3 focus:border-[#D4AF37] outline-none text-sm uppercase tracking-widest transition-all appearance-none text-white"
+              >
+                <option value="" className="bg-[#080808]">Select Supplier...</option>
+                {suppliers.map(s => (
+                  <option key={s.id} value={s.id} className="bg-[#080808]">{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* --- UPDATED: CATEGORY DROPDOWN --- */}
+          <div className="group text-left">
+            <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-3">Category</label>
+            <div className="relative">
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[#D4AF37]/50 group-focus-within:text-[#D4AF37] transition-colors">
+                <ListTree size={16} />
+              </div>
+              <select 
+                {...register("category")}
+                className="w-full bg-transparent border-b border-white/10 pl-8 py-3 focus:border-[#D4AF37] outline-none text-sm uppercase tracking-widest transition-all appearance-none text-white cursor-pointer"
+              >
+                <option value="" className="bg-[#080808]">Select Category...</option>
+                {HARDWARE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat} className="bg-[#080808]">{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           
           <div className="grid grid-cols-2 gap-6">
             <InputGroup label="Unit Price" icon={<DollarSign size={16}/>} register={register("price")} placeholder="0.00" type="number" />
@@ -87,7 +151,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
             />
           </div>
 
-          <button className="w-full bg-[#D4AF37] text-black font-black py-5 tracking-[0.4em] uppercase flex items-center justify-center gap-3 hover:bg-[#E5C158] transition-all mt-10">
+          <button type="submit" className="w-full bg-[#D4AF37] text-black font-black py-5 tracking-[0.4em] uppercase flex items-center justify-center gap-3 hover:bg-[#E5C158] transition-all mt-10 shadow-[0_10px_40px_rgba(212,175,55,0.2)]">
             <Save size={20} /> Record Asset
           </button>
         </form>
@@ -98,11 +162,11 @@ const AddProductModal = ({ isOpen, onClose }) => {
 
 const InputGroup = ({ label, icon, register, placeholder, type = "text" }) => (
   <div className="group">
-    <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-3">{label}</label>
-    <div className="relative">
+    <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-3 text-left">{label}</label>
+    <div className="relative text-left">
       <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[#D4AF37]/50 group-focus-within:text-[#D4AF37] transition-colors">{icon}</div>
       <input 
-        {...register} type={type} placeholder={placeholder}
+        {...register} type={type} placeholder={placeholder} step="any"
         className="w-full bg-transparent border-b border-white/10 pl-8 py-3 focus:border-[#D4AF37] outline-none transition-all text-sm uppercase tracking-widest placeholder:text-gray-800"
       />
     </div>
