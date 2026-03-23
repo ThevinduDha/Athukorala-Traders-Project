@@ -46,6 +46,12 @@ public class ProductController {
                 .filter(p -> p.getStockQuantity() <= 10)
                 .toList();
     }
+
+    @GetMapping("/{id}")
+    public Product getProductById(@PathVariable Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found in registry"));
+    }
     // Add this inside your ProductController class
     @DeleteMapping("/{id}")
     public void deleteProduct(@PathVariable Long id) {
