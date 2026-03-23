@@ -1,10 +1,12 @@
 package com.athukorala.inventory_system.controller;
 
 import com.athukorala.inventory_system.entity.Order;
+import com.athukorala.inventory_system.repository.OrderRepository; // ADDED IMPORT
 import com.athukorala.inventory_system.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -12,8 +14,14 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173")
 public class OrderController {
 
+    private final OrderService orderService;
+    private final OrderRepository orderRepository; // 1. DECLARED REPOSITORY
+
     @Autowired
-    private OrderService orderService;
+    public OrderController(OrderService orderService, OrderRepository orderRepository) {
+        this.orderService = orderService;
+        this.orderRepository = orderRepository; // 2. INJECTED REPOSITORY
+    }
 
     @PostMapping("/checkout")
     public Order processCheckout(@RequestBody Map<String, Object> payload) {
@@ -23,5 +31,25 @@ public class OrderController {
         Double total = Double.valueOf(payload.get("total").toString());
 
         return orderService.finalizeOrder(userId, address, phone, total);
+    }
+
+    @GetMapping("/user/{userId}")
+    public List<Order> getOrdersByUserId(@PathVariable Long userId) {
+        return orderService.getOrdersByUserId(userId);
+    }
+
+    // --- ADMIN LOGISTICS METHODS ---
+
+    @GetMapping("/all")
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    @PatchMapping("/update-status/{id}")
+    public Order updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order Protocol Not Found"));
+        order.setStatus(status);
+        return orderRepository.save(order);
     }
 }
