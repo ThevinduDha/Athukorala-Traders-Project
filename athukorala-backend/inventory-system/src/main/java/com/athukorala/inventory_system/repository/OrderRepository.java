@@ -7,5 +7,6 @@ import java.util.List;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    // Required to retrieve specific customer transaction archives
     List<Order> findByUserId(Long userId);
 }
