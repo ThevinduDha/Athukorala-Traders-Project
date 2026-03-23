@@ -8,6 +8,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard'; // IMPORTED
 import CustomerDashboard from './pages/CustomerDashboard'; // IMPORTED
 import ProductDetail from './pages/ProductDetail';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/portal" element={<PortalPage />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/shopping-cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
 
         {/* --- ROLE-BASED DASHBOARDS --- */}
         

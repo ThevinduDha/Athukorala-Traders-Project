@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom'; // IMPORTED NAVIGATE
-import { Search, Filter, ShoppingCart, Eye, Box, Zap, Droplets, Hammer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, ShoppingCart, Eye } from 'lucide-react';
+import { toast } from 'react-hot-toast'; // IMPORTED TOAST FOR FEEDBACK
 
 const CustomerDashboard = () => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [category, setCategory] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate(); // INITIALIZED NAVIGATE
+  const [cartCount, setCartCount] = useState(0); // STATE FOR DYNAMIC CART COUNT
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch("http://localhost:8080/api/products/all")
@@ -18,6 +20,13 @@ const CustomerDashboard = () => {
         setFilteredProducts(data);
       })
       .catch(err => console.error("Catalog Offline"));
+    
+    // FETCH INITIAL CART COUNT ON LOAD
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+       // Placeholder for fetching actual cart count from backend
+       // fetch(`http://localhost:8080/api/cart/count/${user.id}`)...
+    }
   }, []);
 
   useEffect(() => {
@@ -31,6 +40,44 @@ const CustomerDashboard = () => {
     setFilteredProducts(result);
   }, [category, searchTerm, products]);
 
+  // LOGIC TO ADD ASSET TO THE SHOPPING CART REGISTRY
+  const handleAddToCart = async (product) => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    
+    if (!user) {
+      toast.error("AUTHENTICATION REQUIRED FOR PURCHASE PROTOCOL");
+      return;
+    }
+
+    if (product.stockQuantity <= 0) {
+      toast.error("ASSET DEPLETED: CANNOT INITIALIZE PURCHASE");
+      return;
+    }
+
+    const loadingToast = toast.loading("Syncing with Cart Registry...");
+
+    try {
+      const response = await fetch("http://localhost:8080/api/cart/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          productId: product.id, 
+          quantity: 1 
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Asset added to shopping cart", { id: loadingToast });
+        setCartCount(prev => prev + 1);
+      } else {
+        toast.error("System Error: Cart update failed", { id: loadingToast });
+      }
+    } catch (error) {
+      toast.error("Connection Failed: Ensure Backend is online", { id: loadingToast });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-white p-8 md:p-16 font-sans">
       {/* HEADER SECTION */}
@@ -43,15 +90,20 @@ const CustomerDashboard = () => {
         </motion.div>
 
         <div className="flex flex-col gap-6 w-full md:w-auto">
-          {/* CART INDICATOR - NEW PREVIEW COMPONENT */}
+          {/* CART INDICATOR - CONNECTED TO CART NAVIGATION */}
           <div className="flex justify-end mb-2">
-             <button className="flex items-center gap-3 group text-gray-500 hover:text-[#D4AF37] transition-colors">
+              <button 
+                onClick={() => navigate('/shopping-cart')}
+                className="flex items-center gap-3 group text-gray-500 hover:text-[#D4AF37] transition-colors"
+              >
                 <span className="text-[10px] font-black uppercase tracking-widest">Active Cart</span>
                 <div className="relative p-2 border border-white/10 group-hover:border-[#D4AF37]/50 transition-colors">
-                   <ShoppingCart size={18} />
-                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#D4AF37] text-black text-[8px] font-bold flex items-center justify-center">0</div>
+                    <ShoppingCart size={18} />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#D4AF37] text-black text-[8px] font-bold flex items-center justify-center">
+                      {cartCount}
+                    </div>
                 </div>
-             </button>
+              </button>
           </div>
 
           <div className="relative group">
@@ -79,13 +131,15 @@ const CustomerDashboard = () => {
       </header>
 
       {/* PRODUCT GRID */}
-      <motion.div 
-        layout
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10"
-      >
+      <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
         <AnimatePresence>
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} navigate={navigate} />
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              navigate={navigate} 
+              onAddToCart={() => handleAddToCart(product)} 
+            />
           ))}
         </AnimatePresence>
       </motion.div>
@@ -95,7 +149,7 @@ const CustomerDashboard = () => {
   );
 };
 
-const ProductCard = ({ product, navigate }) => (
+const ProductCard = ({ product, navigate, onAddToCart }) => (
   <motion.div 
     layout
     initial={{ opacity: 0, scale: 0.9 }}
@@ -113,7 +167,7 @@ const ProductCard = ({ product, navigate }) => (
       />
       {product.stockQuantity <= 0 && (
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center">
-          <span className="text-[10px] font-black tracking-[0.4em] text-red-500 border border-red-500/50 px-4 py-2">OUT OF STOCK</span>
+          <span className="text-[10px] font-black tracking-[0.4em] text-red-500 border border-red-500/50 px-4 py-2 uppercase">Out of Stock</span>
         </div>
       )}
     </div>
@@ -129,11 +183,14 @@ const ProductCard = ({ product, navigate }) => (
 
     {/* Hover Actions */}
     <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
-      <button className="flex-1 bg-[#D4AF37] text-black py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#E5C158]">
+      <button 
+        onClick={onAddToCart}
+        disabled={product.stockQuantity <= 0}
+        className={`flex-1 ${product.stockQuantity <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-[#D4AF37] text-black hover:bg-[#E5C158]'} py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all`}
+      >
         <ShoppingCart size={14} /> Add to Cart
       </button>
       
-      {/* UPDATED EYE BUTTON TO REDIRECT TO PRODUCT DETAIL */}
       <button 
         onClick={() => navigate(`/product/${product.id}`)}
         className="p-3 border border-white/10 hover:border-[#D4AF37] transition-colors"
