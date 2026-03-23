@@ -1,17 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Package, Users, Settings, LogOut, 
   Activity, BarChart3, Bell, Search, ShieldCheck, 
-  TrendingUp, ArrowUpRight, Globe
+  TrendingUp, ArrowUpRight, Globe, ShieldAlert, Clock // Added ShieldAlert & Clock
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Added for navigation
 import AddProductModal from './AddProductModal';
 import InventoryList from './InventoryList';
 import LowStockWidget from '../components/LowStockWidget';
 import ClientRegistry from './ClientRegistry';
-import StaffNoticeManager from '../components/StaffNoticeManager'; // IMPORTED MANAGER
+import StaffNoticeManager from '../components/StaffNoticeManager'; 
+
+// --- NEW COMPONENT: LIVE AUDIT FEED WIDGET ---
+const AuditPreviewWidget = () => {
+  const [recentLogs, setRecentLogs] = useState([]);
+
+  useEffect(() => {
+    const fetchLogs = () => {
+      fetch("http://localhost:8080/api/audit/logs")
+        .then(res => res.json())
+        .then(data => setRecentLogs(Array.isArray(data) ? data.slice(0, 4) : []))
+        .catch(err => console.error("Audit Stream Offline"));
+    };
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 10000); // Refresh every 10s
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="p-10 border border-white/5 bg-white/[0.02] backdrop-blur-md relative overflow-hidden group min-h-[400px]">
+      <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-30 group-hover:opacity-100 transition-opacity"></div>
+      <div className="flex justify-between items-center mb-10">
+        <h3 className="text-xs font-black tracking-[0.4em] uppercase text-gray-400">System Integrity • Live Feed</h3>
+        <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-[9px] font-bold text-green-500 tracking-widest uppercase">Live Data</span>
+        </div>
+      </div>
+      <div className="space-y-6">
+        {recentLogs.length > 0 ? recentLogs.map(log => (
+          <div key={log.id} className="flex justify-between items-center border-b border-white/5 pb-4 group cursor-pointer hover:border-[#D4AF37]/30 transition-all">
+            <div className="flex gap-5 items-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></div>
+              <div>
+                <p className="text-sm font-bold tracking-tight uppercase group-hover:text-[#D4AF37] transition-colors">{log.action}</p>
+                <p className="text-[9px] text-gray-600 font-bold tracking-widest uppercase">{log.performedBy} — {log.details}</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-mono text-gray-500 uppercase">{new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          </div>
+        )) : (
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest text-center py-20">Monitoring encrypted streams...</p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const AdminDashboard = () => {
+  const navigate = useNavigate(); // Hook for navigation
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('command'); 
   
@@ -60,6 +108,12 @@ const AdminDashboard = () => {
             label="Client Registry" 
             active={activeTab === 'clients'} 
             onClick={() => setActiveTab('clients')}
+          />
+          {/* UPDATED: LINK TO AUDIT LOGS PAGE */}
+          <NavItem 
+            icon={<ShieldAlert size={18}/>} 
+            label="Security Audit" 
+            onClick={() => navigate('/admin/audit-logs')}
           />
           <NavItem icon={<BarChart3 size={18}/>} label="Financials" />
           <NavItem icon={<Globe size={18}/>} label="Logistics" />
@@ -116,20 +170,11 @@ const AdminDashboard = () => {
               </motion.div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* LEFT: ACTIVITY FEED & STAFF NOTICE MANAGER */}
+                {/* LEFT: LIVE AUDIT FEED & STAFF NOTICE MANAGER */}
                 <div className="lg:col-span-2 space-y-8">
-                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="p-10 border border-white/5 bg-white/[0.02] backdrop-blur-md relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-30 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="flex justify-between items-center mb-10">
-                      <h3 className="text-xs font-black tracking-[0.4em] uppercase text-gray-400">Inventory Stream • Live Log</h3>
-                      <button className="text-[9px] font-bold text-[#D4AF37] border-b border-[#D4AF37]/20 pb-1">VIEW ALL LOGS</button>
-                    </div>
-                    <div className="space-y-6">
-                      <ActivityRow title="Nippon Paint Bulk Entry" time="02 MINS AGO" status="COMPLETED" />
-                      <ActivityRow title="LankaTiles Shipment Dispatch" time="14 MINS AGO" status="PENDING" />
-                      <ActivityRow title="New Client Registration: Pitigala" time="45 MINS AGO" status="VERIFIED" />
-                      <ActivityRow title="Stock Alert: Sierra Cables Low" time="1 HOUR AGO" status="ALERT" color="text-red-500" />
-                    </div>
+                  {/* REPLACED: STATIC FEED WITH LIVE AUDIT WIDGET */}
+                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+                    <AuditPreviewWidget />
                   </motion.div>
 
                   {/* STAFF NOTICE INPUT AREA */}
@@ -149,8 +194,8 @@ const AdminDashboard = () => {
                       <h3 className="text-xs font-black tracking-[0.4em] uppercase text-[#D4AF37] mb-8">Quick Operations</h3>
                       <div className="space-y-4">
                         <ActionButton label="Add New Product" onClick={() => setIsModalOpen(true)} />
-                        <ActionButton label="Generate Report" />
-                        <ActionButton label="System Backup" />
+                        <ActionButton label="Generate Report" onClick={() => navigate('/admin/reports')} />
+                        <ActionButton label="Stock Audit View" onClick={() => navigate('/admin/audit-logs')} />
                       </div>
                     </div>
                     <div className="mt-12 p-6 border border-[#D4AF37]/10 bg-black/40">
@@ -219,19 +264,6 @@ const StatCard = ({ icon, label, val, sub, trend }) => (
       <ArrowUpRight size={12} /> {trend}
     </div>
   </motion.div>
-);
-
-const ActivityRow = ({ title, time, status, color = "text-[#D4AF37]" }) => (
-  <div className="flex justify-between items-center border-b border-white/5 pb-4 group cursor-pointer hover:border-[#D4AF37]/30 transition-all">
-    <div className="flex gap-5 items-center">
-      <div className={`w-1.5 h-1.5 rounded-full ${color === 'text-red-500' ? 'bg-red-500 animate-pulse' : 'bg-[#D4AF37]'}`}></div>
-      <div>
-        <p className="text-sm font-bold tracking-tight uppercase group-hover:text-[#D4AF37] transition-colors">{title}</p>
-        <p className="text-[9px] text-gray-600 font-bold tracking-widest">{time}</p>
-      </div>
-    </div>
-    <span className={`text-[9px] font-black tracking-widest border border-white/10 px-3 py-1 ${color}`}>{status}</span>
-  </div>
 );
 
 const ActionButton = ({ label, onClick }) => (

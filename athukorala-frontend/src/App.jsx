@@ -11,11 +11,12 @@ import ProductDetail from './pages/ProductDetail';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderHistory from './pages/OrderHistory';
-import OrderHistoryAdmin from './pages/AdminOrders'; // For Admin Order View
-import SupplierRegistry from './pages/SupplierRegistry'; // For Suppliers
-import StockAdjustment from './pages/StockAdjustment'; // For Inventory
-import InventoryReport from './pages/InventoryReport'; // For Analytics
-import ProtectedRoute from './components/ProtectedRoute'; // THE GATEKEEPER
+import OrderHistoryAdmin from './pages/AdminOrders'; 
+import SupplierRegistry from './pages/SupplierRegistry'; 
+import StockAdjustment from './pages/StockAdjustment'; 
+import InventoryReport from './pages/InventoryReport'; 
+import AuditLogView from './pages/AuditLogView'; // NEW IMPORT
+import ProtectedRoute from './components/ProtectedRoute'; 
 
 function App() {
   return (
@@ -100,6 +101,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <InventoryReport />
+            </ProtectedRoute>
+          } 
+        />
+        {/* --- NEW AUDIT LOG ROUTE --- */}
+        <Route 
+          path="/admin/audit-logs" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AuditLogView />
             </ProtectedRoute>
           } 
         />
