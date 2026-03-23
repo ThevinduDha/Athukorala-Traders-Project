@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
+import { Package, PlusCircle, MinusCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const StockAdjustment = () => {
@@ -9,23 +9,33 @@ const StockAdjustment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAdjustment = async (type) => {
+    // 1. Validation Logic
     if (!productId) return toast.error("ENTER ASSET SERIAL/ID");
+    if (amount === 0) return toast.error("ADJUSTMENT MAGNITUDE CANNOT BE ZERO");
     
+    // 2. Retrieve Admin Identity from Session
+    const user = JSON.parse(localStorage.getItem("user"));
+    const adminName = user?.name || "Unknown Operator";
+
     const adjustmentValue = type === 'ADD' ? Math.abs(amount) : -Math.abs(amount);
     setIsProcessing(true);
     
-    const loading = toast.loading("Updating Registry...");
+    const loading = toast.loading("Syncing with Registry...");
 
     try {
       const res = await fetch(`http://localhost:8080/api/products/${productId}/adjust-stock`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: adjustmentValue })
+        body: JSON.stringify({ 
+            amount: adjustmentValue,
+            adminName: adminName // CRITICAL: Sent for Audit Log mapping
+        })
       });
 
       if (res.ok) {
-        toast.success("Inventory Levels Re-calibrated", { id: loading });
+        toast.success(`Inventory Re-calibrated by ${adminName}`, { id: loading });
         setAmount(0);
+        setProductId("");
       } else {
         toast.error("Asset ID not found in registry", { id: loading });
       }
@@ -40,7 +50,7 @@ const StockAdjustment = () => {
     <div className="min-h-screen bg-[#050505] text-white p-8 md:p-20 font-sans">
       <header className="mb-16">
         <p className="text-[#D4AF37] text-[10px] font-black tracking-[0.6em] uppercase mb-4">Inventory Operations</p>
-        <h1 className="text-6xl font-black uppercase tracking-tighter">Stock <span className="text-transparent stroke-text">Adjustment</span></h1>
+        <h1 className="text-6xl font-black uppercase tracking-tighter leading-none">Stock <span className="text-transparent stroke-text">Adjustment</span></h1>
       </header>
 
       <div className="max-w-2xl bg-white/[0.02] border border-white/5 p-12">
@@ -68,7 +78,7 @@ const StockAdjustment = () => {
               placeholder="0"
               className="w-full bg-black border border-white/10 p-4 text-5xl font-black tracking-tighter outline-none focus:border-[#D4AF37] text-center"
               value={amount}
-              onChange={(e) => setAmount(parseInt(e.target.value))}
+              onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
             />
           </div>
 

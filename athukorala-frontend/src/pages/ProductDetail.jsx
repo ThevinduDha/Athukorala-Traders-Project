@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ShoppingCart, ShieldCheck, Box, Tag } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, ShieldCheck, Box, Tag, Truck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import SupplierContactCard from '../components/SupplierContactCard'; // IMPORTED
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -30,12 +31,21 @@ const ProductDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
         {/* LEFT: VISUAL ASSET */}
         <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="aspect-square bg-white/[0.02] border border-white/10 p-10 relative group">
+          <div className="aspect-square bg-white/[0.02] border border-white/10 p-10 relative group mb-12">
             <img 
               src={product.imageUrl || "https://res.cloudinary.com/demo/image/upload/v1631530000/industrial-box.png"} 
               alt={product.name} 
               className="w-full h-full object-contain mix-blend-lighten grayscale group-hover:grayscale-0 transition-all duration-700" 
             />
+          </div>
+
+          {/* NEW: SUPPLIER CONTACT SECTION UNDER IMAGE */}
+          <div className="hidden lg:block">
+             <div className="flex items-center gap-3 mb-6">
+                <Truck size={14} className="text-[#D4AF37]" />
+                <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-gray-500">Logistics Source</h3>
+             </div>
+             <SupplierContactCard supplier={product.supplier} />
           </div>
         </motion.div>
 
@@ -49,8 +59,7 @@ const ProductDetail = () => {
             </div>
             <h1 className="text-6xl font-black uppercase tracking-tighter leading-none mb-4">{product.name}</h1>
             <div className="flex items-center gap-4">
-               <span className="text-4xl font-mono text-[#D4AF37]">LKR {product.price}</span>
-               {/* Placeholder for Discount Logic (Section 4) */}
+               <span className="text-4xl font-mono text-[#D4AF37]">LKR {product.price?.toLocaleString()}</span>
                <span className="bg-[#D4AF37]/10 text-[#D4AF37] px-3 py-1 text-[9px] font-black tracking-widest uppercase border border-[#D4AF37]/20">Verified Pricing</span>
             </div>
           </header>
@@ -77,12 +86,17 @@ const ProductDetail = () => {
             </div>
           </div>
 
+          {/* MOBILE SUPPLIER VIEW (Shows only on small screens) */}
+          <div className="lg:hidden mb-12">
+             <SupplierContactCard supplier={product.supplier} />
+          </div>
+
           <div className="mt-auto flex gap-4">
             <button className="flex-1 bg-[#D4AF37] text-black py-5 font-black uppercase tracking-[0.4em] text-[10px] flex items-center justify-center gap-3 hover:bg-[#E5C158] transition-all">
               <ShoppingCart size={18} /> Initialize Purchase
             </button>
             <button className="px-8 border border-white/10 hover:border-[#D4AF37] transition-colors">
-               <Tag size={18} />
+                <Tag size={18} />
             </button>
           </div>
         </motion.div>
