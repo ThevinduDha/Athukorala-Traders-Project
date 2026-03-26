@@ -3,14 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Package, Users, Settings, LogOut, 
   Activity, BarChart3, Bell, Search, ShieldCheck, 
-  TrendingUp, ArrowUpRight, Globe, ShieldAlert, Clock // Added ShieldAlert & Clock
+  TrendingUp, ArrowUpRight, Globe, ShieldAlert, Clock,
+  Percent, Tag 
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Added for navigation
+import { useNavigate } from 'react-router-dom';
 import AddProductModal from './AddProductModal';
 import InventoryList from './InventoryList';
 import LowStockWidget from '../components/LowStockWidget';
 import ClientRegistry from './ClientRegistry';
-import StaffNoticeManager from '../components/StaffNoticeManager'; 
+import StaffNoticeManager from '../components/StaffNoticeManager';
+import DiscountSuggestionPanel from '../components/DiscountSuggestionPanel'; 
+import PromotionManager from '../components/PromotionManager';
+import ActivePromotionList from '../components/ActivePromotionList'; // Import the List component
 
 // --- NEW COMPONENT: LIVE AUDIT FEED WIDGET ---
 const AuditPreviewWidget = () => {
@@ -24,7 +28,7 @@ const AuditPreviewWidget = () => {
         .catch(err => console.error("Audit Stream Offline"));
     };
     fetchLogs();
-    const interval = setInterval(fetchLogs, 10000); // Refresh every 10s
+    const interval = setInterval(fetchLogs, 10000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -38,7 +42,7 @@ const AuditPreviewWidget = () => {
             <span className="text-[9px] font-bold text-green-500 tracking-widest uppercase">Live Data</span>
         </div>
       </div>
-      <div className="space-y-6">
+      <div className="space-y-6 text-left">
         {recentLogs.length > 0 ? recentLogs.map(log => (
           <div key={log.id} className="flex justify-between items-center border-b border-white/5 pb-4 group cursor-pointer hover:border-[#D4AF37]/30 transition-all">
             <div className="flex gap-5 items-center">
@@ -59,9 +63,11 @@ const AuditPreviewWidget = () => {
 };
 
 const AdminDashboard = () => {
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('command'); 
+  // TRIGGER FOR SYNCING MANAGER AND LIST
+  const [promoRefreshTrigger, setPromoRefreshTrigger] = useState(0); 
   
   const user = JSON.parse(localStorage.getItem("user") || '{"name":"Administrator"}');
 
@@ -75,9 +81,9 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#050505] text-white font-sans selection:bg-[#D4AF37] selection:text-black overflow-hidden">
+    <div className="flex min-h-screen bg-[#050505] text-white font-sans selection:bg-[#D4AF37] selection:text-black overflow-hidden text-left">
       
-      {/* SIDEBAR */}
+      {/* --- SIDEBAR --- */}
       <motion.aside 
         initial={{ x: -100, opacity: 0 }} 
         animate={{ x: 0, opacity: 1 }}
@@ -104,12 +110,17 @@ const AdminDashboard = () => {
             onClick={() => setActiveTab('inventory')}
           />
           <NavItem 
+            icon={<Tag size={18}/>} 
+            label="Promotions & Deals" 
+            active={activeTab === 'promotions'} 
+            onClick={() => setActiveTab('promotions')}
+          />
+          <NavItem 
             icon={<Users size={18}/>} 
             label="Client Registry" 
             active={activeTab === 'clients'} 
             onClick={() => setActiveTab('clients')}
           />
-          {/* UPDATED: LINK TO AUDIT LOGS PAGE */}
           <NavItem 
             icon={<ShieldAlert size={18}/>} 
             label="Security Audit" 
@@ -128,8 +139,8 @@ const AdminDashboard = () => {
         </div>
       </motion.aside>
 
-      {/* MAIN INTERFACE */}
-      <main className="flex-1 p-12 overflow-y-auto relative">
+      {/* --- MAIN INTERFACE --- */}
+      <main className="flex-1 p-12 overflow-y-auto relative text-left">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/5 blur-[120px] rounded-full -z-10" />
 
         <header className="flex justify-between items-start mb-16">
@@ -139,7 +150,7 @@ const AdminDashboard = () => {
               <p className="text-[#D4AF37] text-[10px] font-bold tracking-[0.6em] uppercase">Auth Level: Senior Admin</p>
             </div>
             <h1 className="text-6xl font-black uppercase tracking-tighter leading-none">
-              Welcome, <span className="text-transparent stroke-text">{user.name}</span>
+              {activeTab === 'promotions' ? 'Promotion' : 'Welcome,'} <span className="text-transparent stroke-text">{activeTab === 'promotions' ? 'Registry' : user.name}</span>
             </h1>
           </motion.div>
           
@@ -162,52 +173,58 @@ const AdminDashboard = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
+              className="space-y-12"
             >
-              <motion.div variants={containerVars} initial="initial" animate="animate" className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+              <motion.div variants={containerVars} initial="initial" animate="animate" className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <StatCard icon={<Package/>} label="Active Inventory" val="14,208" sub="Units in stock" trend="+12.5%" />
                 <StatCard icon={<TrendingUp/>} label="Daily Revenue" val="LKR 425K" sub="Verified Transactions" trend="+8.2%" />
                 <StatCard icon={<Users/>} label="Total Clients" val="2,148" sub="Database Entries" trend="+4%" />
               </motion.div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* LEFT: LIVE AUDIT FEED & STAFF NOTICE MANAGER */}
-                <div className="lg:col-span-2 space-y-8">
-                  {/* REPLACED: STATIC FEED WITH LIVE AUDIT WIDGET */}
-                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-                    <AuditPreviewWidget />
-                  </motion.div>
+              <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+                <DiscountSuggestionPanel />
+              </motion.div>
 
-                  {/* STAFF NOTICE INPUT AREA */}
-                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-                    <StaffNoticeManager />
-                  </motion.div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
+                <div className="lg:col-span-2 space-y-8">
+                  <AuditPreviewWidget />
+                  <StaffNoticeManager />
                 </div>
 
-                {/* RIGHT: ALERTS & ACTIONS */}
                 <div className="flex flex-col gap-8">
-                  <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 }}>
-                    <LowStockWidget />
-                  </motion.div>
+                  <LowStockWidget />
+                  <div className="p-10 border border-white/5 bg-[#D4AF37]/5 backdrop-blur-md flex flex-col justify-between text-left">
+                    <h3 className="text-xs font-black tracking-[0.4em] uppercase text-[#D4AF37] mb-8">Quick Operations</h3>
+                    <div className="space-y-4">
+                      <ActionButton label="Add New Product" onClick={() => setIsModalOpen(true)} />
+                      <ActionButton label="Generate Report" onClick={() => navigate('/admin/reports')} />
+                      <ActionButton label="Stock Audit View" onClick={() => navigate('/admin/audit-logs')} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-                  <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }} className="p-10 border border-white/5 bg-[#D4AF37]/5 backdrop-blur-md flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-xs font-black tracking-[0.4em] uppercase text-[#D4AF37] mb-8">Quick Operations</h3>
-                      <div className="space-y-4">
-                        <ActionButton label="Add New Product" onClick={() => setIsModalOpen(true)} />
-                        <ActionButton label="Generate Report" onClick={() => navigate('/admin/reports')} />
-                        <ActionButton label="Stock Audit View" onClick={() => navigate('/admin/audit-logs')} />
-                      </div>
-                    </div>
-                    <div className="mt-12 p-6 border border-[#D4AF37]/10 bg-black/40">
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">Network Latency</p>
-                      <div className="flex items-center gap-3">
-                        <div className="h-1 flex-1 bg-white/5 overflow-hidden">
-                          <motion.div animate={{ x: [-100, 200] }} transition={{ repeat: Infinity, duration: 2 }} className="h-full w-20 bg-[#D4AF37]" />
-                        </div>
-                        <span className="text-[10px] font-mono text-[#D4AF37]">12MS</span>
-                      </div>
-                    </div>
-                  </motion.div>
+          {/* TAB: PROMOTION MANAGEMENT CRUD */}
+          {activeTab === 'promotions' && (
+            <motion.div 
+              key="promotions" 
+              initial={{ opacity: 0, x: 30 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -30 }} 
+              className="space-y-12"
+            >
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
+                <div className="xl:col-span-7">
+                   {/* ON SUCCESS, TRIGGER REFRESH OF THE LIST */}
+                   <PromotionManager onSuccess={() => setPromoRefreshTrigger(prev => prev + 1)} />
+                </div>
+                <div className="xl:col-span-5 bg-white/[0.02] border border-white/5 p-10 backdrop-blur-xl text-left">
+                   <h3 className="text-xs font-black uppercase tracking-[0.4em] text-[#D4AF37] mb-8">Active Protocols</h3>
+                   <div className="space-y-6">
+                      <ActivePromotionList refreshTrigger={promoRefreshTrigger} />
+                   </div>
                 </div>
               </div>
             </motion.div>
@@ -227,7 +244,6 @@ const AdminDashboard = () => {
         </AnimatePresence>
       </main>
 
-      {/* ANIMATED MODAL OVERLAY */}
       <AnimatePresence>
         {isModalOpen && (
           <AddProductModal 
@@ -242,18 +258,17 @@ const AdminDashboard = () => {
   );
 };
 
-// HELPER COMPONENTS
 const NavItem = ({ icon, label, active = false, onClick }) => (
   <button 
     onClick={onClick}
-    className={`w-full flex items-center gap-5 px-6 py-4 transition-all text-[11px] font-bold tracking-[0.2em] uppercase ${active ? 'bg-[#D4AF37] text-black shadow-[0_10px_40px_rgba(212,175,55,0.25)]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+    className={`w-full flex items-center gap-5 px-6 py-4 transition-all text-[11px] font-bold tracking-[0.2em] uppercase ${active ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
   >
     {icon} {label}
   </button>
 );
 
 const StatCard = ({ icon, label, val, sub, trend }) => (
-  <motion.div whileHover={{ y: -5, borderColor: 'rgba(212, 175, 55, 0.4)' }} className="p-10 border border-white/5 bg-white/[0.01] backdrop-blur-sm transition-all group relative">
+  <motion.div whileHover={{ y: -5, borderColor: 'rgba(212, 175, 55, 0.4)' }} className="p-10 border border-white/5 bg-white/[0.01] backdrop-blur-sm transition-all group relative text-left">
     <div className="absolute top-8 right-8 text-[#D4AF37]/10 group-hover:text-[#D4AF37]/30 transition-colors">
       {React.cloneElement(icon, { size: 48 })}
     </div>
