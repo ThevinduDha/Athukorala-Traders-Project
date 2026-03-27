@@ -20,7 +20,7 @@ public class Product {
     private String imageUrl;
     private int reorderLevel;
 
-    // --- ADD THIS TRANSIENT FIELD FOR UI SYNC ---
+    // --- CRITICAL SYNC FIELD ---
     @Transient
     private Double discountedPrice;
 
