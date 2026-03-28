@@ -7,7 +7,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder // Recommended for easier object creation in your Auth/Order logic
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,10 +32,19 @@ public class User {
     private String password;
 
     private String phone;
+
+    // Using Column definition to ensure long addresses don't get truncated
+    @Column(columnDefinition = "TEXT")
     private String address;
 
+    // --- NEW: AVATAR PROTOCOL ---
+    // Uses LONGTEXT to store the Base64 image string from React
+    @Column(columnDefinition = "LONGTEXT")
+    private String profilePic;
+
     @Enumerated(EnumType.STRING)
-    private Role role; // Ensure your Role enum has ADMIN, STAFF, CUSTOMER
+    @Column(nullable = false)
+    private Role role; // ADMIN, STAFF, CUSTOMER
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }

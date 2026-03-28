@@ -1,9 +1,10 @@
 package com.athukorala.inventory_system.controller;
 
 import com.athukorala.inventory_system.entity.User;
-import com.athukorala.inventory_system.entity.Role; // IMPORT YOUR ROLE ENUM
+import com.athukorala.inventory_system.entity.Role;
 import com.athukorala.inventory_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +17,6 @@ public class UserController {
 
     private final UserRepository userRepository;
 
-    // Constructor injection resolves the "Field injection is not recommended" warning
     @Autowired
     public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -24,7 +24,6 @@ public class UserController {
 
     @GetMapping("/customers")
     public List<User> getAllCustomers() {
-        // Updated to compare using the Enum name
         return userRepository.findAll().stream()
                 .filter(user -> "CUSTOMER".equals(user.getRole().name()))
                 .collect(Collectors.toList());
@@ -35,12 +34,40 @@ public class UserController {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Remove quotes and convert the String to your Role Enum
         String cleanedRole = newRole.replace("\"", "").toUpperCase();
-
-        // This converts the String "STAFF" or "ADMIN" into the Role Enum type
         user.setRole(Role.valueOf(cleanedRole));
 
         return userRepository.save(user);
+    }
+
+    // --- PROFILE UPDATE PROTOCOL ---
+    @PutMapping("/update/{id}")
+    public ResponseEntity<?> updateProfile(@PathVariable Long id, @RequestBody User profileData) {
+        return userRepository.findById(id).map(existingUser -> {
+
+            // Update Name
+            if (profileData.getName() != null && !profileData.getName().isEmpty()) {
+                existingUser.setName(profileData.getName());
+            }
+
+            // Update Phone
+            if (profileData.getPhone() != null && !profileData.getPhone().isEmpty()) {
+                existingUser.setPhone(profileData.getPhone());
+            }
+
+            // Update Address
+            if (profileData.getAddress() != null && !profileData.getAddress().isEmpty()) {
+                existingUser.setAddress(profileData.getAddress());
+            }
+
+            // Update Profile Picture
+            if (profileData.getProfilePic() != null) {
+                existingUser.setProfilePic(profileData.getProfilePic());
+            }
+
+            userRepository.save(existingUser);
+            return ResponseEntity.ok(existingUser);
+
+        }).orElse(ResponseEntity.notFound().build());
     }
 }
