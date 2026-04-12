@@ -4,6 +4,25 @@ const API = axios.create({
   baseURL: "http://localhost:8080/api",
 });
 
+// 🔐 Attach JWT token automatically
+API.interceptors.request.use((req) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return req;
+});
+
+// ---------- AUTH ----------
+
+export const loginUser = (data) =>
+  API.post("/auth/login", data);
+
+export const registerUser = (data) =>
+  API.post("/auth/register", data);
+
 // ---------- INVENTORY ----------
 
 export const getInventory = () => API.get("/inventory");
@@ -35,7 +54,6 @@ export const updateReorder = (id, data) =>
 export const deleteMovement = (id) =>
   API.delete(`/inventory/movements/${id}`);
 
-
 // ---------- SUPPLIERS ----------
 
 export const getSuppliers = () =>
@@ -58,3 +76,5 @@ export const getSuppliersByProduct = (id) =>
 
 export const unlinkSupplier = (productId, supplierId) =>
   API.delete(`/suppliers/unlink?productId=${productId}&supplierId=${supplierId}`);
+
+export default API;
