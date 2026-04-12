@@ -4,6 +4,7 @@ import com.athukorala.inventory_system.dto.LoginRequest;
 import com.athukorala.inventory_system.dto.UserResponseDto;
 import com.athukorala.inventory_system.entity.Role;
 import com.athukorala.inventory_system.entity.User;
+import com.athukorala.inventory_system.security.JwtUtil;
 import com.athukorala.inventory_system.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +21,25 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private JwtUtil jwtUtil;   // 🔥 NEW
+
+    // 🔐 LOGIN WITH JWT
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             User user = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            return ResponseEntity.ok(UserResponseDto.fromEntity(user));
+
+            // 🔥 Generate JWT
+            String token = jwtUtil.generateToken(user.getEmail());
+
+            // 🔥 Response with token + user
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("user", UserResponseDto.fromEntity(user));
+
+            return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             Map<String, String> response = new HashMap<>();
             response.put("message", e.getMessage());
@@ -32,6 +47,7 @@ public class AuthController {
         }
     }
 
+    // 📝 REGISTER CUSTOMER
     @PostMapping("/register")
     public ResponseEntity<?> registerCustomer(@RequestBody User user) {
         try {
@@ -44,6 +60,7 @@ public class AuthController {
         }
     }
 
+    // 👨‍💼 CREATE STAFF
     @PostMapping("/admin/create-staff")
     public ResponseEntity<?> createStaff(@RequestBody User user) {
         try {
@@ -56,6 +73,7 @@ public class AuthController {
         }
     }
 
+    // 👑 CREATE ADMIN
     @PostMapping("/admin/create-admin")
     public ResponseEntity<?> createAdmin(@RequestBody User user) {
         try {
