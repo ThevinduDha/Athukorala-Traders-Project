@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import heroImg from '../assets/hero.png';
 import { toast, Toaster } from 'react-hot-toast';
+import { loginUser, registerUser } from "../services/inventoryApi";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -50,63 +51,57 @@ const AuthPage = () => {
     []
   );
 
-  const onSubmit = async (data) => {
-    setAuthError('');
-    const loadingToast = toast.loading(
-      isLogin ? 'Authenticating...' : 'Creating Account...'
-    );
+const onSubmit = async (data) => {
+  setAuthError('');
+  const loadingToast = toast.loading(
+    isLogin ? 'Authenticating...' : 'Creating Account...'
+  );
 
-    try {
-      const url = isLogin
-        ? 'http://localhost:8080/api/auth/login'
-        : 'http://localhost:8080/api/auth/register';
+  try {
+    const response = isLogin
+      ? await loginUser(data)
+      : await registerUser(data);
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+    const result = response.data;
 
-      const result = await response.json();
+    if (isLogin) {
+      // 🔐 STORE TOKEN
+      localStorage.setItem('token', result.token);
 
-      if (response.ok) {
-        toast.success(
-          isLogin ? `Access Granted: ${result.name}` : 'Account Created!',
-          { id: loadingToast }
-        );
+      // 👤 STORE USER
+      localStorage.setItem('user', JSON.stringify(result.user));
 
-        if (isLogin) {
-          localStorage.setItem('user', JSON.stringify(result));
+      toast.success(
+        `Access Granted: ${result.user.name}`,
+        { id: loadingToast }
+      );
 
-          setTimeout(() => {
-            if (result.role === 'ADMIN') {
-              navigate('/admin-dashboard');
-            } else if (result.role === 'STAFF') {
-              navigate('/staff-dashboard');
-            } else {
-              navigate('/customer-dashboard');
-            }
-          }, 1200);
+      setTimeout(() => {
+        if (result.user.role === 'ADMIN') {
+          navigate('/admin-dashboard');
+        } else if (result.user.role === 'STAFF') {
+          navigate('/staff-dashboard');
         } else {
-          setIsLogin(true);
+          navigate('/customer-dashboard');
         }
-      } else {
-        if (isLogin) {
-          setAuthError('Your email or password is wrong');
-        }
-        toast.error(result.message || 'Invalid Credentials', {
-          id: loadingToast
-        });
-      }
-    } catch (error) {
-      if (isLogin) {
-        setAuthError('Your email or password is wrong');
-      }
-      toast.error('Connection Failed. Is IntelliJ running?', {
-        id: loadingToast
-      });
+      }, 1200);
+
+    } else {
+      toast.success('Account Created!', { id: loadingToast });
+      setIsLogin(true);
     }
-  };
+
+  } catch (error) {
+    if (isLogin) {
+      setAuthError('Your email or password is wrong');
+    }
+
+    toast.error(
+      error?.response?.data?.message || 'Authentication Failed',
+      { id: loadingToast }
+    );
+  }
+};
 
   const sectionReveal = {
     hidden: { opacity: 0, y: 24 },
