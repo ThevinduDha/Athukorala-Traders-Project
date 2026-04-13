@@ -8,6 +8,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -17,6 +19,8 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private EmailService emailService;
 
     public User registerCustomer(User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
@@ -92,6 +96,37 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+    public String generateResetToken(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("If email exists, reset link will be sent"));
+
+        String token = UUID.randomUUID().toString();
+
+        user.setResetToken(token);
+        user.setTokenExpiry(LocalDateTime.now().plusMinutes(15));
+
+        userRepository.save(user);
+
+        emailService.sendResetEmail(user.getEmail(), token);
+        return token;
+    }
+    public void resetPassword(String token, String newPassword) {
+
+        User user = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+
+        if (user.getTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Token expired");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // clear token after use
+        user.setResetToken(null);
+        user.setTokenExpiry(null);
+
         userRepository.save(user);
     }
 }
