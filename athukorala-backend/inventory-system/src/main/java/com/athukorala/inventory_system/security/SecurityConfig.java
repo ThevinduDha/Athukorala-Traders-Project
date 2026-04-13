@@ -19,7 +19,17 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // ✅ PUBLIC APIs
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/products/**",
+                                "/api/promotions/**",
+                                "/api/inventory/**",
+                                "/api/suppliers/**",
+                                "/api/users/**"
+                        ).permitAll()
+
+                        // 🔐 ALL OTHER APIs REQUIRE LOGIN
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter,
