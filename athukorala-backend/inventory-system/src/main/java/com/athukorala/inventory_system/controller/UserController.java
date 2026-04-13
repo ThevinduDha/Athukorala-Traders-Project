@@ -30,11 +30,18 @@ public class UserController {
         this.authService = authService;
     }
 
-    @GetMapping("/all")
+    // 🔥 FIX: MAIN ENDPOINT (IMPORTANT)
+    @GetMapping
     public List<UserResponseDto> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(UserResponseDto::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    // OPTIONAL: keep your old one
+    @GetMapping("/all")
+    public List<UserResponseDto> getAllUsersLegacy() {
+        return getAllUsers();
     }
 
     @GetMapping("/customers")
@@ -100,8 +107,6 @@ public class UserController {
             existingUser.setPhone(profileData.getPhone());
             existingUser.setAddress(profileData.getAddress());
 
-            // This supports upload, replace, and delete
-            // If frontend sends null or "" it will remove the image
             if (profileData.getProfilePic() == null || profileData.getProfilePic().trim().isEmpty()) {
                 existingUser.setProfilePic(null);
             } else {
@@ -112,13 +117,9 @@ public class UserController {
             return ResponseEntity.ok(UserResponseDto.fromEntity(savedUser));
 
         } catch (RuntimeException e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
-            return ResponseEntity.status(404).body(response);
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "PROFILE UPDATE FAILED");
-            return ResponseEntity.status(500).body(response);
+            return ResponseEntity.status(500).body(Map.of("message", "PROFILE UPDATE FAILED"));
         }
     }
 
