@@ -29,8 +29,9 @@ const AuthPage = () => {
     handleSubmit,
     formState: { errors }
   } = useForm({
-    mode: 'onBlur'
-  });
+  mode: 'onBlur',
+  shouldUnregister: false   // 🔥 THIS FIXES EVERYTHING
+});
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,57 +52,76 @@ const AuthPage = () => {
     []
   );
 
-const onSubmit = async (data) => {
-  setAuthError('');
-  const loadingToast = toast.loading(
-    isLogin ? 'Authenticating...' : 'Creating Account...'
-  );
+  const onSubmit = async (data) => {
+    setAuthError('');
 
-  try {
-    const response = isLogin
-      ? await loginUser(data)
-      : await registerUser(data);
+    console.log("FORM DATA:", data); // 🔥 DEBUG
 
-    const result = response.data;
+    const loadingToast = toast.loading(
+      isLogin ? 'Authenticating...' : 'Creating Account...'
+    );
 
-    if (isLogin) {
-      // 🔐 STORE TOKEN
-      localStorage.setItem('token', result.token);
+    try {
+      let payload;
 
-      // 👤 STORE USER
-      localStorage.setItem('user', JSON.stringify(result.user));
+      if (isLogin) {
+        payload = {
+          email: data.email,
+          password: data.password
+        };
+      } else {
+        payload = {
+          name: data.name,
+          email: data.email,
+          password: data.password
+        };
+      }
 
-      toast.success(
-        `Access Granted: ${result.user.name}`,
+      const response = isLogin
+        ? await loginUser(payload)
+        : await registerUser(payload);
+
+      const result = response.data;
+
+      if (isLogin) {
+        // 🔐 STORE TOKEN
+        localStorage.setItem('token', result.token);
+
+        // 👤 STORE USER
+        localStorage.setItem('user', JSON.stringify(result.user));
+
+        toast.success(`Access Granted: ${result.user.name}`, {
+          id: loadingToast
+        });
+
+        setTimeout(() => {
+          if (result.user.role === 'ADMIN') {
+            navigate('/admin-dashboard');
+          } else if (result.user.role === 'STAFF') {
+            navigate('/staff-dashboard');
+          } else {
+            navigate('/customer-dashboard');
+          }
+        }, 1200);
+
+      } else {
+        toast.success('Account Created!', { id: loadingToast });
+        setIsLogin(true);
+      }
+
+    } catch (error) {
+      console.error("ERROR:", error.response?.data); // 🔥 DEBUG
+
+      if (isLogin) {
+        setAuthError('Your email or password is wrong');
+      }
+
+      toast.error(
+        error?.response?.data?.message || 'Authentication Failed',
         { id: loadingToast }
       );
-
-      setTimeout(() => {
-        if (result.user.role === 'ADMIN') {
-          navigate('/admin-dashboard');
-        } else if (result.user.role === 'STAFF') {
-          navigate('/staff-dashboard');
-        } else {
-          navigate('/customer-dashboard');
-        }
-      }, 1200);
-
-    } else {
-      toast.success('Account Created!', { id: loadingToast });
-      setIsLogin(true);
     }
-
-  } catch (error) {
-    if (isLogin) {
-      setAuthError('Your email or password is wrong');
-    }
-
-    toast.error(
-      error?.response?.data?.message || 'Authentication Failed',
-      { id: loadingToast }
-    );
-  }
-};
+  };
 
   const sectionReveal = {
     hidden: { opacity: 0, y: 24 },
@@ -371,6 +391,19 @@ const onSubmit = async (data) => {
                     </button>
                   </InputWrap>
                   {errors.password && <p className="auth-error">{errors.password.message}</p>}
+                  
+                  {/* 🔥 FORGOT PASSWORD BUTTON (Login Mode Only) */}
+                  {isLogin && (
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/forgot-password")}
+                        className="text-[10px] tracking-[0.12em] uppercase font-bold text-gray-400 hover:text-[#D4AF37] transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <AnimatePresence>
